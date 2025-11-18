@@ -6,9 +6,7 @@ import (
 	"bufio"
 	"strings" 
 	"path/filepath"
-	"io/fs"
-
-
+	"slices"
 )
 
 // Ensures gofmt doesn't remove the "fmt" and "os" imports in stage 1 (feel free to remove this!)
@@ -18,15 +16,19 @@ var _ = os.Stdout
 
 func checkPermission(path string) bool {
 	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
 
 	mode := info.Mode()
 	return mode&0100 != 0
 }
 
+var builtin = []string{"echo", "type", "exit"}
+
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
 
-	var builtin = []string{"echo", "type", "exit"}
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
 		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -36,6 +38,10 @@ func main() {
 		}
 
 		argv := strings.Fields(input)
+		if len(argv) == 0 {
+			continue
+		}
+
 		cmd := argv[0]
 
 		switch cmd {
@@ -46,7 +52,7 @@ func main() {
 		case "type":
 			TypeCommand(argv)
 		default:
-			fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
+			fmt.Fprintf(os.Stdout, "%s: command not found\n", cmd)
 		}
 		
 	}
@@ -58,13 +64,13 @@ func EchoCommand(argv []string) {
 
 func TypeCommand(argv []string) {
 
-	if len(argv) == 1{
+	if len(argv) == 1 {
 		return
 	}
 
-	valud = argv[1]
+	value := argv[1]
 
-	if slices.Contains(builtin, value){
+	if slices.Contains(builtin, value) {
 		fmt.Fprintf(os.Stdout, "%s is a shell builtin\n", value)
 		return
 	}
