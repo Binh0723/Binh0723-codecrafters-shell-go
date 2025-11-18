@@ -77,7 +77,10 @@ func cdCommand(argv []string) {
 		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0],path)
 		return
 	} else {
-		_ := os.Chdir(path)
+		err := os.Chdir(path)
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "can not change directory: %s\n", err)
+		}
 	}
 }
 
