@@ -25,7 +25,7 @@ func checkPermission(path string) bool {
 	return mode&0100 != 0
 }
 
-var builtin = []string{"echo", "type", "exit", "pwd"}
+var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
 
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
@@ -54,6 +54,8 @@ func main() {
 			TypeCommand(argv)
 		case "pwd":
 			pwdCommand(argv)
+		case "cd":
+			cdCommand(argv)
 		default:
 			customCommand(argv)
 		}
@@ -61,6 +63,22 @@ func main() {
 	}
 }
 
+
+func cdCommand(argv []string) {
+	if len(argv) > 2 {
+		fmt.Fprintf(os.Stdout, "%s: too many arguments\n", argv[0])
+		return
+	}
+	
+	path := argv[1]
+	_, err := os.Stat(path)
+
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0],path)
+	} else {
+		err := os.Chdir(path)
+	}
+}
 func pwdCommand(argv []string) {
 
 	if len(argv) > 1{
