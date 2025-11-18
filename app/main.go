@@ -13,15 +13,16 @@ var _ = os.Stdout
 
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
+	for {
+		fmt.Fprint(os.Stdout, "$ ")
+		reader := bufio.NewReader(os.Stdin)
+		line, err := reader.ReadString('\n')
 
-	fmt.Fprint(os.Stdout, "$ ")
-	reader := bufio.NewReader(os.Stdin)
-	line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
 
-	if err != nil {
-		return
+		command := strings.TrimSpace(line)
+		fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
 	}
-
-	command := strings.TrimSpace(line)
-	fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
 }
