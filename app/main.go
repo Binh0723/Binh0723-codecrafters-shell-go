@@ -13,9 +13,10 @@ var _ = os.Stdout
 
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
+
+	fmt.Fprint(os.Stdout, "$ ")
 	reader := bufio.Reader(os.Stdin)
 	line, err := reader.ReadString('\n')
-	fmt.Fprint(os.Stdout, "$ ")
 
 	if err != nil {
 		return
