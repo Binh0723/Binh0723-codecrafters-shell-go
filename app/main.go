@@ -110,7 +110,7 @@ func customCommand(argv []string) {
 
 	for _, dir := range PATH_DIRS {
 		fullPath := filepath.Join(dir, value)
-		if info, err := os.Stat(fullPath); err != nil {
+		if info, err := os.Stat(fullPath); err == nil {
 			if !info.IsDir() && checkPermission(fullPath) {
 				cmd := exec.Command(fullPath, argv[1:]...)
 				cmd.Stdout = os.Stdout
