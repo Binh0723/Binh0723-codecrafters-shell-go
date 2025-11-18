@@ -52,6 +52,8 @@ func main() {
 			EchoCommand(argv)
 		case "type":
 			TypeCommand(argv)
+		case "pwd":
+			fmt.Fprintf(os.Stdout, "%s\n", os.Getwd())
 		default:
 			customCommand(argv)
 		}
