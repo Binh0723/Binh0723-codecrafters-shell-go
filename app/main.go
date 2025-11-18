@@ -73,15 +73,19 @@ func cdCommand(argv []string) {
 	path := argv[1]
 	_, err := os.Stat(path)
 
-	if err != nil {
+	if err != nil && path != "~" {
 		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0],path)
 		return
-	} else {
-		err := os.Chdir(path)
-		if err != nil {
-			fmt.Fprintf(os.Stdout, "can not change directory: %s\n", err)
-		}
+	} 	
+	if argv[1] == "~" {
+		home_path := os.Getenv("HOME")
+		path = home_path
 	}
+	err = os.Chdir(path)
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "can not change directory: %s\n", err)
+	}
+	
 }
 
 func pwdCommand(argv []string) {
