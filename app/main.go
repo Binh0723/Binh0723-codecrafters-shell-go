@@ -15,7 +15,7 @@ func main() {
 	// TODO: Uncomment the code below to pass the first stage
 
 	fmt.Fprint(os.Stdout, "$ ")
-	reader := bufio.Reader(os.Stdin)
+	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
 
 	if err != nil {
@@ -23,5 +23,5 @@ func main() {
 	}
 
 	command := strings.TrimSpace(line)
-	fmt.Printf(os.Stdout, "%s: command not found\n", command)
+	fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
 }
