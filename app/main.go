@@ -23,6 +23,10 @@ func main() {
 		}
 
 		command := strings.TrimSpace(line)
+		parts := strings.Split(command, " ")
+		if parts[0] == "exit" {
+			return
+		}
 		fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
 	}
 }
