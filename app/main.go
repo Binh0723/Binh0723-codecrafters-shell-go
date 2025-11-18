@@ -53,12 +53,28 @@ func main() {
 		case "type":
 			TypeCommand(argv)
 		case "pwd":
-			fmt.Fprintf(os.Stdout, "%s\n", os.Getwd())
+			pwdCommand(argv)
 		default:
 			customCommand(argv)
 		}
 		
 	}
+}
+
+func pwdCommand(argv []string) {
+
+	if len(argv) > 1{
+		fmt.Fprintf(os.Stdout, "%s: too many arguments\n", argv[0])
+		return
+	}
+	dir, err := os.Getwd()
+
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "%s: %s\n", argv[0], err)
+		return
+	}
+
+	fmt.Fprintf(os.Stdout, "%s\n",dir)
 }
 
 func EchoCommand(argv []string) {
