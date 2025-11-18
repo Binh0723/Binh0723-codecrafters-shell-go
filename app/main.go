@@ -75,10 +75,12 @@ func cdCommand(argv []string) {
 
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0],path)
+		return
 	} else {
-		err := os.Chdir(path)
+		_ := os.Chdir(path)
 	}
 }
+
 func pwdCommand(argv []string) {
 
 	if len(argv) > 1{
