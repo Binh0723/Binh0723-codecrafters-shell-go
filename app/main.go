@@ -26,7 +26,11 @@ func main() {
 		parts := strings.Split(command, " ")
 		if parts[0] == "exit" {
 			return
-		}
-		fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
+		} else if parts[0] == "echo" {
+			new_line := parts[1]
+			fmt.Fprintf(os.Stdout, "%s\n", new_line)
+		} else {
+			fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
+		}	
 	}
 }
