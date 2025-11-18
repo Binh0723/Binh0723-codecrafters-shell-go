@@ -25,7 +25,7 @@ func checkPermission(path string) bool {
 	return mode&0100 != 0
 }
 
-var builtin = []string{"echo", "type", "exit"}
+var builtin = []string{"echo", "type", "exit", "pwd"}
 
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
