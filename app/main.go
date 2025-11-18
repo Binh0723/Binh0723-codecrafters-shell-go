@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"strings" 
 	"slices"
+	"path/filepath"
 )
 
 // Ensures gofmt doesn't remove the "fmt" and "os" imports in stage 1 (feel free to remove this!)
@@ -88,10 +89,20 @@ func findFile(value string) (string, bool) {
 	PATH_DIRS := strings.Split(PATH, ":")
 
 	for _, dir := range PATH_DIRS {
-		fullPath := dir + "/" + value
-		if _, err := os.Stat(fullPath); err == nil {
-			return fullPath, true
+		// Skip empty directories in PATH
+		if dir == "" {
+			continue
 		}
+		
+		fullPath := filepath.Join(dir, value)
+		if info, err := os.Stat(fullPath); err == nil {
+			// Must be a file (not a directory) and have execute permissions
+			if !info.IsDir() && checkPermission(fullPath) {
+				return fullPath, true
+			}
+			// If file exists but lacks execute permissions, skip and continue
+		}
+		// If directory doesn't exist, os.Stat will return error, so we continue
 	}
 
 	return "", false
