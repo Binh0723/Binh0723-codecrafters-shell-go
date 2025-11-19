@@ -67,7 +67,7 @@ func main() {
 
 func catCommand(argv []string) {
 	for _, arg := range argv[1:] {
-		if strings.StartsWith(arg, "'")  && strings.EndsWith(arg, "'") {
+		if strings.HasPrefix(arg, "'")  && strings.HasSuffix(arg, "'") {
 			arg = arg[1: len(arg) - 1]
 		}
 
@@ -124,7 +124,7 @@ func pwdCommand(argv []string) {
 
 func EchoCommand(argv []string) {
 	for _, arg := range argv[1:] {
-		if strings.StartsWith(arg, "'")  && strings.EndsWith(arg, "'") {
+		if strings.HasPrefix(arg, "'")  && strings.HasSuffix(arg, "'") {
 			arg = arg[1: len(arg) - 1]
 		}
 		fmt.Fprintf(os.Stdout, "%s", arg)
