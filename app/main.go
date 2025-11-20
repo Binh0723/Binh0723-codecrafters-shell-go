@@ -30,33 +30,51 @@ var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
 func parseCommand(command string) []string {
 	res := make([]string, 0)
 	command = strings.TrimSpace(command)
-	inQuotes := false
+	inSingleQuotes, inDoubleQuotes := false, false
 	current := ""
+	inArg := false
+
 	for _, char := range command {
-		if char == '\'' {
-			inQuotes = !inQuotes
-		} else if char == ' '  {
-			if inQuotes {
-				current += string(char)
+		if inSingleQuotes {
+			if char == '\''{
+				inSingleQuotes = false
 			} else {
-				// Only append if current is not empty (collapses consecutive spaces)
-				if current != "" {
-					res = append(res, current)
-					current = ""
-				}
+				current += string(char)
+			}
+		} else if inDoubleQuotes {
+			if char == '"' {
+				inDoubleQuotes = false
+			} else {
+				current += string(char)
 			}
 		} else {
-			current += string(char)
+			switch char {
+			case '\'':
+				inSingleQuotes = true
+				inArg = true
+			case '"':
+				inDoubleQuotes = true
+				inArg = true
+			case ' ':
+				if inArg {
+					res = append(res, current)
+					current = ""
+					inArg = false
+				}
+			default:
+				current += string(char)
+				inArg = true
+			}
 		}
 	}
 
-	if current != "" {
+	if inArg {
 		res = append(res, current)
 	}
-
-	return res
-	
+	return res	
 }
+
+
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
 
@@ -98,9 +116,6 @@ func main() {
 
 func catCommand(argv []string) {
 	for _, arg := range argv[1:] {
-		if strings.HasPrefix(arg, "'")  && strings.HasSuffix(arg, "'") {
-			arg = arg[1: len(arg) - 1]
-		}
 
 		cmd := exec.Command("cat", arg)
 		cmd.Stdout = os.Stdout
@@ -154,13 +169,7 @@ func pwdCommand(argv []string) {
 }
 
 func EchoCommand(argv []string) {
-	// fmt.Fprintf(os.Stderr, "DEBUG: argv=%v and length of argv is %d\n", argv, len(argv))
-	for _, arg := range argv[1:] {
-		// fmt.Fprintf(os.Stderr, "DEBUG: arg=%v\n", arg)
-		arg = strings.Trim(arg, "'")
-		fmt.Fprintf(os.Stdout, "%s ", arg)
-	}
-	fmt.Fprint(os.Stdout, "\n")
+	fmt.Fprintf(os.Stdout, "%s\n", strings.Join(argv[1:], " "))
 }
 
 func TypeCommand(argv []string) {
