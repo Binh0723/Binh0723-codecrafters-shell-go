@@ -25,8 +25,38 @@ func checkPermission(path string) bool {
 	return mode&0100 != 0
 }
 
-var builtin = []string{"echo", "type", "exit", "pwd", "cd", "cat"}
+var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
 
+func parseCommand(command string) []string {
+	res := make([]string, 0)
+	command = strings.TrimSpace(command)
+	inQuotes := false
+	current := ""
+	for _, char := range command {
+		if char == '\'' {
+			inQuotes = !inQuotes
+		} else if char == ' '  {
+			if inQuotes {
+				current += string(char)
+			} else {
+				// Only append if current is not empty (collapses consecutive spaces)
+				if current != "" {
+					res = append(res, current)
+					current = ""
+				}
+			}
+		} else {
+			current += string(char)
+		}
+	}
+
+	if current != "" {
+		res = append(res, current)
+	}
+
+	return res
+	
+}
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
 
@@ -38,7 +68,8 @@ func main() {
 			return
 		}
 
-		argv := strings.Fields(input)
+		argv := parseCommand(input)
+		// fmt.Fprintf(os.Stderr, "DEBUG: argv=%v and length of argv is %d\n", argv, len(argv))
 		if len(argv) == 0 {
 			continue
 		}
@@ -123,11 +154,11 @@ func pwdCommand(argv []string) {
 }
 
 func EchoCommand(argv []string) {
+	// fmt.Fprintf(os.Stderr, "DEBUG: argv=%v and length of argv is %d\n", argv, len(argv))
 	for _, arg := range argv[1:] {
-		if strings.HasPrefix(arg, "'")  && strings.HasSuffix(arg, "'") {
-			arg = arg[1: len(arg) - 1]
-		}
-		fmt.Fprintf(os.Stdout, "%s", arg)
+		// fmt.Fprintf(os.Stderr, "DEBUG: arg=%v\n", arg)
+		arg = strings.Trim(arg, "'")
+		fmt.Fprintf(os.Stdout, "%s ", arg)
 	}
 	fmt.Fprint(os.Stdout, "\n")
 }
