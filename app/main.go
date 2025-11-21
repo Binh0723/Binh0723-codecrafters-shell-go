@@ -1,19 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
-	"bufio"
-	"strings" 
-	"slices"
-	"path/filepath"
 	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
 )
 
 // Ensures gofmt doesn't remove the "fmt" and "os" imports in stage 1 (feel free to remove this!)
 var _ = fmt.Fprint
 var _ = os.Stdout
-
 
 func checkPermission(path string) bool {
 	info, err := os.Stat(path)
@@ -30,13 +29,14 @@ var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
 func parseCommand(command string) []string {
 	res := make([]string, 0)
 	command = strings.TrimSpace(command)
-	inSingleQuotes, inDoubleQuotes := false, false
+	inSingleQuotes, inDoubleQuotes, isEscaped := false, false, false
 	current := ""
 	inArg := false
 
 	for _, char := range command {
+
 		if inSingleQuotes {
-			if char == '\''{
+			if char == '\'' {
 				inSingleQuotes = false
 			} else {
 				current += string(char)
@@ -47,8 +47,13 @@ func parseCommand(command string) []string {
 			} else {
 				current += string(char)
 			}
+		} else if isEscaped {
+			current += string(char)
+			isEscaped = false
 		} else {
 			switch char {
+			case '\\':
+				isEscaped = true
 			case '\'':
 				inSingleQuotes = true
 				inArg = true
@@ -71,9 +76,8 @@ func parseCommand(command string) []string {
 	if inArg {
 		res = append(res, current)
 	}
-	return res	
+	return res
 }
-
 
 func main() {
 	// TODO: Uncomment the code below to pass the first stage
@@ -110,7 +114,7 @@ func main() {
 		default:
 			customCommand(argv)
 		}
-		
+
 	}
 }
 
@@ -133,14 +137,14 @@ func cdCommand(argv []string) {
 		fmt.Fprintf(os.Stdout, "%s: too many arguments\n", argv[0])
 		return
 	}
-	
+
 	path := argv[1]
 	_, err := os.Stat(path)
 
 	if err != nil && path != "~" {
-		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0],path)
+		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0], path)
 		return
-	} 	
+	}
 	if argv[1] == "~" {
 		home_path := os.Getenv("HOME")
 		path = home_path
@@ -149,12 +153,12 @@ func cdCommand(argv []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "can not change directory: %s\n", err)
 	}
-	
+
 }
 
 func pwdCommand(argv []string) {
 
-	if len(argv) > 1{
+	if len(argv) > 1 {
 		fmt.Fprintf(os.Stdout, "%s: too many arguments\n", argv[0])
 		return
 	}
@@ -165,7 +169,7 @@ func pwdCommand(argv []string) {
 		return
 	}
 
-	fmt.Fprintf(os.Stdout, "%s\n",dir)
+	fmt.Fprintf(os.Stdout, "%s\n", dir)
 }
 
 func EchoCommand(argv []string) {
@@ -199,7 +203,7 @@ func findFile(value string) (string, bool) {
 	PATH_DIRS := strings.Split(PATH, ":")
 
 	for _, dir := range PATH_DIRS {
-		
+
 		fullPath := filepath.Join(dir, value)
 		if info, err := os.Stat(fullPath); err == nil {
 			if !info.IsDir() && checkPermission(fullPath) {
