@@ -25,11 +25,12 @@ func checkPermission(path string) bool {
 }
 
 var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
+var specialCharacter = []rune{'"', '\\'}
 
 func parseCommand(command string) []string {
 	res := make([]string, 0)
 	command = strings.TrimSpace(command)
-	inSingleQuotes, inDoubleQuotes, isEscaped := false, false, false
+	inSingleQuotes, inDoubleQuotes, isEscaped, escapePossible := false, false, false, false
 	current := ""
 	inArg := false
 
@@ -42,10 +43,21 @@ func parseCommand(command string) []string {
 				current += string(char)
 			}
 		} else if inDoubleQuotes {
-			if char == '"' {
+			if char == '"' && !escapePossible {
 				inDoubleQuotes = false
+			} else if char == '\\' && !escapePossible {
+				escapePossible = true
 			} else {
-				current += string(char)
+				if escapePossible {
+					if char == '"' || char == '\\' {
+						current += string(char)
+					} else {
+						current += "\\" + string(char)
+					}
+					escapePossible = false
+				} else {
+					current += string(char)
+				}
 			}
 		} else if isEscaped {
 			current += string(char)
