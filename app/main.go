@@ -25,12 +25,12 @@ func checkPermission(path string) bool {
 }
 
 var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
-var specialCharacter = []rune{'"', '\\'}
 
-func parseCommand(command string) []string {
+func parseCommand(command string) ([]string, string) {
 	res := make([]string, 0)
 	command = strings.TrimSpace(command)
-	inSingleQuotes, inDoubleQuotes, isEscaped, escapePossible := false, false, false, false
+	printPath := ""
+	inSingleQuotes, inDoubleQuotes, isEscaped, escapePossible, argHasQuote, isPrintPath := false, false, false, false, false, false
 	current := ""
 	inArg := false
 
@@ -66,15 +66,28 @@ func parseCommand(command string) []string {
 			switch char {
 			case '\\':
 				isEscaped = true
+				argHasQuote = true
 			case '\'':
 				inSingleQuotes = true
 				inArg = true
+				argHasQuote = true
 			case '"':
 				inDoubleQuotes = true
 				inArg = true
+				argHasQuote = true
 			case ' ':
 				if inArg {
-					res = append(res, current)
+					if (current == ">" || current == "1>") && !argHasQuote {
+						isPrintPath = true
+					} else {
+						if isPrintPath {
+							printPath = current
+							isPrintPath = false
+						} else {
+							res = append(res, current)
+						}
+					}
+					argHasQuote = false
 					current = ""
 					inArg = false
 				}
@@ -86,9 +99,13 @@ func parseCommand(command string) []string {
 	}
 
 	if inArg {
-		res = append(res, current)
+		if isPrintPath {
+			printPath = current
+		} else {
+			res = append(res, current)
+		}
 	}
-	return res
+	return res, printPath
 }
 
 func main() {
@@ -102,10 +119,23 @@ func main() {
 			return
 		}
 
-		argv := parseCommand(input)
+		argv, outputFile := parseCommand(input)
 		// fmt.Fprintf(os.Stderr, "DEBUG: argv=%v and length of argv is %d\n", argv, len(argv))
 		if len(argv) == 0 {
 			continue
+		}
+
+		var f *os.File
+		oldStdout := os.Stdout
+
+		if outputFile != "" {
+			var err error
+			f, err = os.Create(outputFile)
+			if err != nil {
+				fmt.Fprintln(os.Stdout, "Error creating file:", err)
+				continue
+			}
+			os.Stdout = f
 		}
 
 		cmd := argv[0]
@@ -127,26 +157,25 @@ func main() {
 			customCommand(argv)
 		}
 
+		if f != nil {
+			os.Stdout = oldStdout
+			f.Close()
+		}
+
 	}
 }
 
 func catCommand(argv []string) {
 	for _, arg := range argv[1:] {
-
 		cmd := exec.Command("cat", arg)
 		cmd.Stdout = os.Stdout
-		err := cmd.Run()
-
-		if err != nil {
-			fmt.Fprintf(os.Stdout, "%s: %s\n", argv[0], err)
-			return
-		}
+		cmd.Stderr = os.Stderr
+		_ = cmd.Run()
 	}
-
 }
 func cdCommand(argv []string) {
 	if len(argv) > 2 {
-		fmt.Fprintf(os.Stdout, "%s: too many arguments\n", argv[0])
+		fmt.Fprintf(os.Stderr, "%s: too many arguments\n", argv[0])
 		return
 	}
 
@@ -154,7 +183,7 @@ func cdCommand(argv []string) {
 	_, err := os.Stat(path)
 
 	if err != nil && path != "~" {
-		fmt.Fprintf(os.Stdout, "%s: %s: No such file or directory\n", argv[0], path)
+		fmt.Fprintf(os.Stderr, "%s: %s: No such file or directory\n", argv[0], path)
 		return
 	}
 	if argv[1] == "~" {
@@ -163,7 +192,7 @@ func cdCommand(argv []string) {
 	}
 	err = os.Chdir(path)
 	if err != nil {
-		fmt.Fprintf(os.Stdout, "can not change directory: %s\n", err)
+		fmt.Fprintf(os.Stderr, "can not change directory: %s\n", err)
 	}
 
 }
@@ -239,6 +268,7 @@ func customCommand(argv []string) {
 			if !info.IsDir() && checkPermission(fullPath) {
 				cmd := exec.Command(value, argv[1:]...)
 				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
 
 				err := cmd.Run()
 				if err != nil {
@@ -248,5 +278,5 @@ func customCommand(argv []string) {
 			}
 		}
 	}
-	fmt.Fprintf(os.Stdout, "%s: command not found\n", value)
+	fmt.Fprintf(os.Stderr, "%s: command not found\n", value)
 }
