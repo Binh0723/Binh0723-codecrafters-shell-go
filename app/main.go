@@ -25,6 +25,7 @@ func checkPermission(path string) bool {
 }
 
 var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
+var operators = []string{">", "1>", "2>", ">>", "1>>"}
 
 func parseCommand(command string) ([]string, string, string) {
 	res := make([]string, 0)
@@ -78,7 +79,7 @@ func parseCommand(command string) ([]string, string, string) {
 				argHasQuote = true
 			case ' ':
 				if inArg {
-					if (current == ">" || current == "1>" || current == "2>") && !argHasQuote {
+					if (slices.Contains(operators, current)) && !argHasQuote {
 						operator = current
 						isPrintPath = true
 					} else {
@@ -132,14 +133,23 @@ func main() {
 
 		if outputFile != "" {
 			var err error
-			f, err = os.Create(outputFile)
-			if err != nil {
-				fmt.Fprintln(os.Stdout, "Error creating file:", err)
-				continue
+			var flags int
+
+			if operator == ">>" || operator == "1>>" {
+				flags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
+			} else {
+				flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 			}
-			if operator == "1>" || operator == ">" {
+
+			f, err = os.OpenFile(outputFile, flags, 0644)
+			if err != nil {
+				fmt.Fprintln(os.Stdout, "Error opening file:", err)
+			}
+
+			switch operator {
+			case ">", "1>", "1>>", ">>":
 				os.Stdout = f
-			} else if operator == "2>" {
+			case "2>":
 				os.Stderr = f
 			}
 		}
