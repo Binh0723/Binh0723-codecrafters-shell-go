@@ -25,7 +25,7 @@ func checkPermission(path string) bool {
 }
 
 var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
-var operators = []string{">", "1>", "2>", ">>", "1>>"}
+var operators = []string{">", "1>", "2>", ">>", "1>>", "2>>"}
 
 func parseCommand(command string) ([]string, string, string) {
 	res := make([]string, 0)
@@ -135,7 +135,7 @@ func main() {
 			var err error
 			var flags int
 
-			if operator == ">>" || operator == "1>>" {
+			if operator == ">>" || operator == "1>>" || operator == "2>>" {
 				flags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 			} else {
 				flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
@@ -149,7 +149,7 @@ func main() {
 			switch operator {
 			case ">", "1>", "1>>", ">>":
 				os.Stdout = f
-			case "2>":
+			case "2>", "2>>":
 				os.Stderr = f
 			}
 		}
