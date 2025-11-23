@@ -26,12 +26,13 @@ func checkPermission(path string) bool {
 
 var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
 
-func parseCommand(command string) ([]string, string) {
+func parseCommand(command string) ([]string, string, string) {
 	res := make([]string, 0)
 	command = strings.TrimSpace(command)
 	printPath := ""
 	inSingleQuotes, inDoubleQuotes, isEscaped, escapePossible, argHasQuote, isPrintPath := false, false, false, false, false, false
 	current := ""
+	operator := ""
 	inArg := false
 
 	for _, char := range command {
@@ -77,7 +78,8 @@ func parseCommand(command string) ([]string, string) {
 				argHasQuote = true
 			case ' ':
 				if inArg {
-					if (current == ">" || current == "1>") && !argHasQuote {
+					if (current == ">" || current == "1>" || current == "2>") && !argHasQuote {
+						operator = current
 						isPrintPath = true
 					} else {
 						if isPrintPath {
@@ -105,7 +107,7 @@ func parseCommand(command string) ([]string, string) {
 			res = append(res, current)
 		}
 	}
-	return res, printPath
+	return res, printPath, operator
 }
 
 func main() {
@@ -119,14 +121,14 @@ func main() {
 			return
 		}
 
-		argv, outputFile := parseCommand(input)
-		// fmt.Fprintf(os.Stderr, "DEBUG: argv=%v and length of argv is %d\n", argv, len(argv))
+		argv, outputFile, operator := parseCommand(input)
 		if len(argv) == 0 {
 			continue
 		}
 
 		var f *os.File
 		oldStdout := os.Stdout
+		oldStderr := os.Stderr
 
 		if outputFile != "" {
 			var err error
@@ -135,7 +137,11 @@ func main() {
 				fmt.Fprintln(os.Stdout, "Error creating file:", err)
 				continue
 			}
-			os.Stdout = f
+			if operator == "1>" || operator == ">" {
+				os.Stdout = f
+			} else if operator == "2>" {
+				os.Stderr = f
+			}
 		}
 
 		cmd := argv[0]
@@ -159,6 +165,7 @@ func main() {
 
 		if f != nil {
 			os.Stdout = oldStdout
+			os.Stderr = oldStderr
 			f.Close()
 		}
 
