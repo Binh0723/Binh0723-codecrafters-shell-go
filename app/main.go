@@ -129,10 +129,33 @@ func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	return newLine, length
 }
 func main() {
+	var items []readline.PrefixCompleterInterface
+
+	PATH := os.Getenv("PATH")
+	PATH_DIRS := strings.Split(PATH, ":")
+	files := make([]string, 0)
+	for _, dir := range PATH_DIRS {
+		entry, _ := os.ReadDir(dir)
+
+		for _, file := range entry {
+			if file.IsDir() {
+				continue
+			}
+			files = append(files, file.Name())
+		}
+
+	}
+
+	for _, file := range files {
+		items = append(items, readline.PcItem(file))
+	}
+
+	for _, item := range builtin {
+		items = append(items, readline.PcItem(item))
+	}
+
 	var simpleCompleter = readline.NewPrefixCompleter(
-		readline.PcItem("echo"),
-		readline.PcItem("type"),
-		readline.PcItem("exit"),
+		items...,
 	)
 	completer := &AutoComplete{
 		completer: simpleCompleter,
