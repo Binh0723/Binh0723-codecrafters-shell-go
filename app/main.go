@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -118,19 +119,49 @@ func isAppendOperator(oprator string) bool {
 
 type AutoComplete struct {
 	completer readline.AutoCompleter
+	tabPress  bool
+	rl        *readline.Instance
 }
 
 func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	newLine, length = a.completer.Do(line, pos)
 
+	sort.Slice(newLine, func(i, j int) bool {
+		return string(newLine[i]) < string(newLine[j])
+	})
+
 	if len(newLine) == 0 {
 		fmt.Fprintf(os.Stdout, "\x07")
+	} else if len(newLine) == 1 {
+		return newLine, length
+	} else {
+		if !a.tabPress {
+			a.tabPress = true
+			fmt.Fprintf(os.Stdout, "\x07")
+		} else {
+			a.tabPress = false
+			strs := make([]string, 0, len(newLine))
+			for _, s := range newLine {
+				strs = append(strs, strings.TrimSpace(string(s)))
+			}
+			fmt.Fprintf(os.Stdout, "%s\n", strings.Join(strs, "  "))
+			fmt.Fprintf(os.Stdout, "%s%s\n", a.rl.Config.Prompt, string(line))
+
+			a.rl.Refresh()
+		}
 	}
 	return newLine, length
 }
+
+func (a *AutoComplete) OnChange(line []rune, pos int, key rune) (newLine []rune, newPos int, ok bool) {
+	if key != '\t' {
+		a.tabPress = false
+	}
+	return nil, 0, false
+}
+
 func main() {
 	var items []readline.PrefixCompleterInterface
-
 	PATH := os.Getenv("PATH")
 	PATH_DIRS := strings.Split(PATH, ":")
 	files := make([]string, 0)
@@ -159,24 +190,21 @@ func main() {
 	)
 	completer := &AutoComplete{
 		completer: simpleCompleter,
+		tabPress:  false,
 	}
+
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",
 		AutoComplete: completer,
+		Listener:     completer,
 	})
+	completer.rl = rl
 	if err != nil {
 		panic(err)
 	}
 	defer rl.Close()
 
 	for {
-
-		// fmt.Fprint(os.Stdout, "$ ")
-		// input, err := bufio.NewReader(os.Stdin).ReadString('\n')
-
-		// if err != nil {
-		// 	return
-		// }
 		input, err := rl.Readline()
 		if err != nil {
 			break
