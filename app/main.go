@@ -145,7 +145,7 @@ func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 				strs = append(strs, strings.TrimSpace(string(s)))
 			}
 			fmt.Fprintf(os.Stdout, "%s\n", "Wrong input")
-			fmt.Fprintf(os.Stdout, "%s\n", strings.Join(strs, "  "))
+			// fmt.Fprintf(os.Stdout, "%s\n", strings.Join(strs, "  "))
 			fmt.Fprintf(os.Stdout, "%s%s\n", a.rl.Config.Prompt, string(line))
 
 			a.rl.Refresh()
