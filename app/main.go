@@ -115,12 +115,28 @@ func parseCommand(command string) ([]string, string, string) {
 func isAppendOperator(oprator string) bool {
 	return oprator == ">>" || oprator == "1>>" || oprator == "2>>"
 }
+
+type AutoComplete struct {
+	completer readline.AutoCompleter
+}
+
+func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	newLine, length = a.completer.Do(line, pos)
+
+	if len(newLine) == 0 {
+		fmt.Fprintf(os.Stdout, "\x07")
+	}
+	return newLine, length
+}
 func main() {
-	var completer = readline.NewPrefixCompleter(
+	var simpleCompleter = readline.NewPrefixCompleter(
 		readline.PcItem("echo"),
 		readline.PcItem("type"),
 		readline.PcItem("exit"),
 	)
+	completer := &AutoComplete{
+		completer: simpleCompleter,
+	}
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",
 		AutoComplete: completer,
