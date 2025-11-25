@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
 // Ensures gofmt doesn't remove the "fmt" and "os" imports in stage 1 (feel free to remove this!)
@@ -111,15 +112,35 @@ func parseCommand(command string) ([]string, string, string) {
 	return res, printPath, operator
 }
 
+func isAppendOperator(oprator string) bool {
+	return oprator == ">>" || oprator == "1>>" || oprator == "2>>"
+}
 func main() {
-	// TODO: Uncomment the code below to pass the first stage
+	var completer = readline.NewPrefixCompleter(
+		readline.PcItem("echo"),
+		readline.PcItem("type"),
+		readline.PcItem("exit"),
+	)
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:       "$ ",
+		AutoComplete: completer,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
 
 	for {
-		fmt.Fprint(os.Stdout, "$ ")
-		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 
+		// fmt.Fprint(os.Stdout, "$ ")
+		// input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+
+		// if err != nil {
+		// 	return
+		// }
+		input, err := rl.Readline()
 		if err != nil {
-			return
+			break
 		}
 
 		argv, outputFile, operator := parseCommand(input)
@@ -135,7 +156,7 @@ func main() {
 			var err error
 			var flags int
 
-			if operator == ">>" || operator == "1>>" || operator == "2>>" {
+			if isAppendOperator(operator) {
 				flags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
 			} else {
 				flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
