@@ -125,6 +125,9 @@ type AutoComplete struct {
 
 func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	newLine, length = a.completer.Do(line, pos)
+	// if string(line) == "ech"{
+	// 	fmt.Fprintf(os.Stdout, "new line is %v\n", newLine)
+	// }
 
 	sort.Slice(newLine, func(i, j int) bool {
 		return string(newLine[i]) < string(newLine[j])
@@ -132,23 +135,27 @@ func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 
 	if len(newLine) == 0 {
 		fmt.Fprintf(os.Stdout, "\x07")
+		return nil,0
 	} else if len(newLine) == 1 {
+		
 		return newLine, length
 	} else {
 		if !a.tabPress {
 			a.tabPress = true
 			fmt.Fprintf(os.Stdout, "\x07")
+			return nil, 0
 		} else {
 			a.tabPress = false
 			strs := make([]string, 0, len(newLine))
 			for _, s := range newLine {
-				strs = append(strs, strings.TrimSpace(string(s)))
+				strs = append(strs, string(line) + strings.TrimSpace(string(s)))
 			}
-
+			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(strs, "  "))
 			a.rl.Refresh()
+			return nil, 0
 		}
 	}
-	return newLine, length
+	// return newLine, length
 }
 
 func (a *AutoComplete) OnChange(line []rune, pos int, key rune) (newLine []rune, newPos int, ok bool) {
@@ -175,11 +182,20 @@ func main() {
 
 	}
 
+	seen := make(map[string]bool)
 	for _, file := range files {
+		if seen[file] {
+			continue
+		}
+		seen[file] = true
 		items = append(items, readline.PcItem(file))
 	}
 
 	for _, item := range builtin {
+		if seen[item] {
+			continue
+		}
+		seen[item] = true
 		items = append(items, readline.PcItem(item))
 	}
 
