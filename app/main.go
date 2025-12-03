@@ -123,6 +123,19 @@ type AutoComplete struct {
 	rl        *readline.Instance
 }
 
+func getLongestPrefix(strs []string) string {
+	longestPrefix := ""
+	first, last := strs[0], strs[len(strs)-1]
+	minLength := min(len(first), len(last))
+	for i := 0; i < minLength; i++ {
+		if first[i] == last[i] {
+			longestPrefix += string(first[i])
+		} else {
+			break
+		}
+	}
+	return longestPrefix
+}
 func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	newLine, length = a.completer.Do(line, pos)
 	// if string(line) == "ech"{
@@ -135,21 +148,26 @@ func (a *AutoComplete) Do(line []rune, pos int) (newLine [][]rune, length int) {
 
 	if len(newLine) == 0 {
 		fmt.Fprintf(os.Stdout, "\x07")
-		return nil,0
+		return nil, 0
 	} else if len(newLine) == 1 {
-		
 		return newLine, length
 	} else {
+		strs := make([]string, 0, len(newLine))
+		for _, s := range newLine {
+			strs = append(strs, string(line)+strings.TrimSpace(string(s)))
+		}
+		longestPrefix := getLongestPrefix(strs)
+		longestPrefix = longestPrefix[len(line):]
+		if longestPrefix != "" {
+			return [][]rune{[]rune(longestPrefix)}, len(longestPrefix)
+		}
+
 		if !a.tabPress {
 			a.tabPress = true
 			fmt.Fprintf(os.Stdout, "\x07")
 			return nil, 0
 		} else {
 			a.tabPress = false
-			strs := make([]string, 0, len(newLine))
-			for _, s := range newLine {
-				strs = append(strs, string(line) + strings.TrimSpace(string(s)))
-			}
 			fmt.Fprintf(os.Stdout, "\n%s\n", strings.Join(strs, "  "))
 			a.rl.Refresh()
 			return nil, 0
