@@ -16,6 +16,54 @@ import (
 var _ = fmt.Fprint
 var _ = os.Stdout
 
+func splitByPipe(command string) []string {
+	commands := make([]string, 0)
+	command = strings.TrimSpace(command)
+	inSingleQuotes, inDoubleQuotes, isEscaped := false, false, false
+	current := ""
+	for _, char := range command {
+		if inSingleQuotes {
+			if char == '\'' {
+				inSingleQuotes = false
+			}
+			current += string(char)
+		} else if inDoubleQuotes {
+			if char == '"' && !isEscaped {
+				inDoubleQuotes = false
+			} else if char == '\\' && !isEscaped {
+				isEscaped = true
+			} else {
+				isEscaped = false
+			}
+			current += string(char)
+		} else if isEscaped {
+			current += string(char)
+			isEscaped = false
+		} else {
+			switch char {
+			case '\\':
+				isEscaped = true
+				current += string(char)
+			case '\'':
+				inSingleQuotes = true
+				current += string(char)
+			case '"':
+				inDoubleQuotes = true
+				current += string(char)
+			case '|':
+				commands = append(commands, current)
+				current = ""
+			default:
+				current += string(char)
+			}
+		}
+
+	}
+	if current != "" {
+		commands = append(commands, current)
+	}
+	return commands
+}
 func checkPermission(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -183,6 +231,65 @@ func (a *AutoComplete) OnChange(line []rune, pos int, key rune) (newLine []rune,
 	return nil, 0, false
 }
 
+func executeCommands(command string) {
+	argv, outputFile, operator := parseCommand(command)
+	if len(argv) == 0 {
+		return
+	}
+
+	var f *os.File
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+
+	if outputFile != "" {
+		var err error
+		var flags int
+
+		if isAppendOperator(operator) {
+			flags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
+		} else {
+			flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+		}
+
+		f, err = os.OpenFile(outputFile, flags, 0644)
+		if err != nil {
+			fmt.Fprintln(os.Stdout, "Error opening file:", err)
+		}
+
+		switch operator {
+		case ">", "1>", "1>>", ">>":
+			os.Stdout = f
+		case "2>", "2>>":
+			os.Stderr = f
+		}
+	}
+
+	cmd := argv[0]
+
+	switch cmd {
+	case "exit":
+		os.Exit(0)
+	case "echo":
+		EchoCommand(argv)
+	case "type":
+		TypeCommand(argv)
+	case "pwd":
+		pwdCommand(argv)
+	case "cd":
+		cdCommand(argv)
+	// case "cat":
+	// 	catCommand(argv)
+	default:
+		customCommand(argv)
+	}
+
+	if f != nil {
+		os.Stdout = oldStdout
+		os.Stderr = oldStderr
+		f.Close()
+	}
+
+}
 func main() {
 	var items []readline.PrefixCompleterInterface
 	PATH := os.Getenv("PATH")
@@ -241,64 +348,43 @@ func main() {
 		if err != nil {
 			break
 		}
+		commands := splitByPipe(input)
+		if len(commands) > 1 {
+			reader, writer, err := os.Pipe()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error creating pipe:", err)
+				continue
+			}
 
-		argv, outputFile, operator := parseCommand(input)
-		if len(argv) == 0 {
+			command1, _, _ := parseCommand(commands[0])
+			cmd1 := exec.Command(command1[0], command1[1:]...)
+			cmd1.Stdout = writer
+			cmd1.Stderr = os.Stderr
+
+			if err := cmd1.Start(); err != nil {
+				fmt.Fprintln(os.Stderr, "Error starting command 1:", err)
+				continue
+			}
+
+			command2, _, _ := parseCommand(commands[1])
+			cmd2 := exec.Command(command2[0], command2[1:]...)
+			cmd2.Stdin = reader
+			cmd2.Stdout = os.Stdout
+			cmd2.Stderr = os.Stderr
+
+			if err := cmd2.Start(); err != nil {
+				fmt.Fprintln(os.Stderr, "Error starting command 2:", err)
+				continue
+			}
+			writer.Close()
+
+			cmd1.Wait()
+			cmd2.Wait()
+			reader.Close()
 			continue
 		}
-
-		var f *os.File
-		oldStdout := os.Stdout
-		oldStderr := os.Stderr
-
-		if outputFile != "" {
-			var err error
-			var flags int
-
-			if isAppendOperator(operator) {
-				flags = os.O_APPEND | os.O_CREATE | os.O_WRONLY
-			} else {
-				flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
-			}
-
-			f, err = os.OpenFile(outputFile, flags, 0644)
-			if err != nil {
-				fmt.Fprintln(os.Stdout, "Error opening file:", err)
-			}
-
-			switch operator {
-			case ">", "1>", "1>>", ">>":
-				os.Stdout = f
-			case "2>", "2>>":
-				os.Stderr = f
-			}
-		}
-
-		cmd := argv[0]
-
-		switch cmd {
-		case "exit":
-			return
-		case "echo":
-			EchoCommand(argv)
-		case "type":
-			TypeCommand(argv)
-		case "pwd":
-			pwdCommand(argv)
-		case "cd":
-			cdCommand(argv)
-		case "cat":
-			catCommand(argv)
-		default:
-			customCommand(argv)
-		}
-
-		if f != nil {
-			os.Stdout = oldStdout
-			os.Stderr = oldStderr
-			f.Close()
-		}
-
+		executeCommands(input)
+		
 	}
 }
 
