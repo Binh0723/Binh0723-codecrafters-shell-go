@@ -8,14 +8,16 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
+	"io"
 
 	"github.com/chzyer/readline"
 )
 
 // Ensures gofmt doesn't remove the "fmt" and "os" imports in stage 1 (feel free to remove this!)
 var _ = fmt.Fprint
-var _ = os.Stdout
-
+var stdOut = os.Stdout
+var stdIn = os.Stdin
 func splitByPipe(command string) []string {
 	commands := make([]string, 0)
 	command = strings.TrimSpace(command)
@@ -290,6 +292,31 @@ func executeCommands(command string) {
 	}
 
 }
+func runCommand(argv []string, input io.Reader, output io.Writer, wg *sync.WaitGroup) {
+	cmd := argv[0]
+	wg.Add(1)
+	go func(){
+		defer wg.Done()
+		if slices.Contains(builtin, cmd) {
+			oldStdout := os.Stdout
+			if w, ok := output.(*os.File); ok {
+				os.Stdout = w
+			}
+			executeCommands(strings.Join(argv, " "))
+			os.Stdout = oldStdout
+		}else{
+			cmd := exec.Command(cmd, argv[1:]...)
+			cmd.Stdin = input
+			cmd.Stdout = output
+			cmd.Stderr = os.Stderr
+			_ = cmd.Run()
+		}
+		if w, ok := output.(*os.File); ok && w != os.Stdout {
+			w.Close()
+		}
+	}()
+}
+
 func main() {
 	var items []readline.PrefixCompleterInterface
 	PATH := os.Getenv("PATH")
@@ -357,30 +384,17 @@ func main() {
 			}
 
 			command1, _, _ := parseCommand(commands[0])
-			cmd1 := exec.Command(command1[0], command1[1:]...)
-			cmd1.Stdout = writer
-			cmd1.Stderr = os.Stderr
-
-			if err := cmd1.Start(); err != nil {
-				fmt.Fprintln(os.Stderr, "Error starting command 1:", err)
-				continue
-			}
-
 			command2, _, _ := parseCommand(commands[1])
-			cmd2 := exec.Command(command2[0], command2[1:]...)
-			cmd2.Stdin = reader
-			cmd2.Stdout = os.Stdout
-			cmd2.Stderr = os.Stderr
 
-			if err := cmd2.Start(); err != nil {
-				fmt.Fprintln(os.Stderr, "Error starting command 2:", err)
-				continue
-			}
+			var wg sync.WaitGroup
+			
+			runCommand(command1, stdIn, writer, &wg)
+			runCommand(command2, reader, stdOut, &wg)
+
+			wg.Wait()
 			writer.Close()
-
-			cmd1.Wait()
-			cmd2.Wait()
 			reader.Close()
+			
 			continue
 		}
 		executeCommands(input)
@@ -388,14 +402,7 @@ func main() {
 	}
 }
 
-func catCommand(argv []string) {
-	for _, arg := range argv[1:] {
-		cmd := exec.Command("cat", arg)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		_ = cmd.Run()
-	}
-}
+
 func cdCommand(argv []string) {
 	if len(argv) > 2 {
 		fmt.Fprintf(os.Stderr, "%s: too many arguments\n", argv[0])
