@@ -322,6 +322,20 @@ func historyCommand(argv []string) {
 				history = append(history, line)
 			}
 			return 
+		} else if argv[1] == "-w" {
+			fileName := argv[2]
+			_, err := os.Stat(fileName)
+			var file *os.File
+			if err != nil {
+			    file, _ = os.Create(fileName)
+			} else {
+				file, _ = os.Open(fileName)
+			}
+
+			for i := 0; i < len(history); i++ {
+				file.Write([]byte(history[i] + "\n"))
+			}
+			return
 		}
 		count,_ = strconv.Atoi(argv[1])
 
