@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"io"
+	"strconv"
 
 	"github.com/chzyer/readline"
 )
@@ -281,7 +282,7 @@ func executeCommands(command string) {
 	case "cd":
 		cdCommand(argv)
 	case "history":
-		historyCommand()
+		historyCommand(argv)
 
 	default:
 		customCommand(argv)
@@ -295,10 +296,16 @@ func executeCommands(command string) {
 
 }
 
-func historyCommand() {
-	for i := 0;i < len(history); i++ {
+func historyCommand(argv []string) {
+	count := len(history)
+	if len(argv) > 1 {
+		count,_ = strconv.Atoi(argv[1])
+
+	} 
+	for i := len(history) - count;i < len(history); i++ {
 		fmt.Fprintf(os.Stdout, "%d %s\n", i+1, history[i])
 	}
+
 }
 func runCommand(argv []string, input io.Reader, output io.Writer, wg *sync.WaitGroup) {
 	cmd := argv[0]
