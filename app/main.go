@@ -377,31 +377,57 @@ func main() {
 		}
 		commands := splitByPipe(input)
 		if len(commands) > 1 {
-			reader, writer, err := os.Pipe()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error creating pipe:", err)
-				continue
-			}
+			// reader, writer, err := os.Pipe()
+			// if err != nil {
+			// 	fmt.Fprintln(os.Stderr, "Error creating pipe:", err)
+			// 	continue
+			// }
 
-			command1, _, _ := parseCommand(commands[0])
-			command2, _, _ := parseCommand(commands[1])
+			// command1, _, _ := parseCommand(commands[0])
+			// command2, _, _ := parseCommand(commands[1])
 
+			// var wg sync.WaitGroup
+			
+			// runCommand(command1, stdIn, writer, &wg)
+			// runCommand(command2, reader, stdOut, &wg)
+
+			// wg.Wait()
+			// reader.Close()
+			
+			// continue
+			prevInput := os.Stdin
 			var wg sync.WaitGroup
-			
-			runCommand(command1, stdIn, writer, &wg)
-			runCommand(command2, reader, stdOut, &wg)
+			for i := 0;i < len(commands);i ++ {
+				currentCommand,_,_ := parseCommand(commands[i])
+				var reader *os.File
+				var writer *os.File
+				if i != len(commands) - 1{
+					reader, writer,_ = os.Pipe()
+				} else {
+					writer = os.Stdout
+				}
+				runCommand(currentCommand, prevInput, writer, &wg)
+				prevInput = reader
 
+				
+
+			}
+			prevInput.Close()
 			wg.Wait()
-			writer.Close()
-			reader.Close()
-			
 			continue
 		}
 		executeCommands(input)
 		
 	}
 }
-
+func catCommand(argv []string) {
+	for _, arg := range argv[1:] {
+		cmd := exec.Command("cat", arg)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		_ = cmd.Run()
+	}
+}
 
 func cdCommand(argv []string) {
 	if len(argv) > 2 {
