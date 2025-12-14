@@ -18,6 +18,7 @@ import (
 var _ = fmt.Fprint
 var stdOut = os.Stdout
 var stdIn = os.Stdin
+var history = make([]string, 0)
 func splitByPipe(command string) []string {
 	commands := make([]string, 0)
 	command = strings.TrimSpace(command)
@@ -76,7 +77,7 @@ func checkPermission(path string) bool {
 	return mode&0100 != 0
 }
 
-var builtin = []string{"echo", "type", "exit", "pwd", "cd"}
+var builtin = []string{"echo", "type", "exit", "pwd", "cd", "history"}
 var operators = []string{">", "1>", "2>", ">>", "1>>", "2>>"}
 
 func parseCommand(command string) ([]string, string, string) {
@@ -279,8 +280,9 @@ func executeCommands(command string) {
 		pwdCommand(argv)
 	case "cd":
 		cdCommand(argv)
-	// case "cat":
-	// 	catCommand(argv)
+	case "history":
+		historyCommand()
+
 	default:
 		customCommand(argv)
 	}
@@ -291,6 +293,12 @@ func executeCommands(command string) {
 		f.Close()
 	}
 
+}
+
+func historyCommand() {
+	for i := 0;i < len(history); i++ {
+		fmt.Fprintf(os.Stdout, "%d %s\n", i+1, history[i])
+	}
 }
 func runCommand(argv []string, input io.Reader, output io.Writer, wg *sync.WaitGroup) {
 	cmd := argv[0]
@@ -375,6 +383,7 @@ func main() {
 		if err != nil {
 			break
 		}
+		history = append(history, input)
 		commands := splitByPipe(input)
 		if len(commands) > 1 {
 			// reader, writer, err := os.Pipe()
