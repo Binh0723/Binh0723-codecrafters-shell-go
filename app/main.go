@@ -11,6 +11,7 @@ import (
 	"sync"
 	"io"
 	"strconv"
+	"bufio"
 
 	"github.com/chzyer/readline"
 )
@@ -299,6 +300,29 @@ func executeCommands(command string) {
 func historyCommand(argv []string) {
 	count := len(history)
 	if len(argv) > 1 {
+		if argv[1] == "-r" {
+			fileName := argv[2]
+			file, err := os.Open(fileName)
+
+			if err != nil {
+				fmt.Fprintf(os.Stdout, "history: %s: No such file or directory\n", fileName)
+				return
+			}
+
+			scanner := bufio.NewScanner(file)
+			scanner.Split(bufio.ScanLines)
+			var text []string
+
+			for scanner.Scan() {
+				text = append(text, scanner.Text())
+			}
+			file.Close()
+
+			for _, line := range text {
+				history = append(history, line)
+			}
+			return 
+		}
 		count,_ = strconv.Atoi(argv[1])
 
 	} 
