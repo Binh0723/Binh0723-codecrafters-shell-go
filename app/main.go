@@ -21,6 +21,7 @@ var _ = fmt.Fprint
 var stdOut = os.Stdout
 var stdIn = os.Stdin
 var history = make([]string, 0)
+var historyIndex  int = 0
 func splitByPipe(command string) []string {
 	commands := make([]string, 0)
 	command = strings.TrimSpace(command)
@@ -336,6 +337,20 @@ func historyCommand(argv []string) {
 				file.Write([]byte(history[i] + "\n"))
 			}
 			return
+		} else if argv[1] == "-a" {
+			file, err := os.OpenFile(argv[2], os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+			if err != nil {
+				fmt.Fprintf(os.Stdout, "history: %s: No such file or directory\n", argv[2])
+				return
+			}
+
+			for i := historyIndex;i < len(history);i++ {
+				_,_ = file.Write([]byte(history[i] + "\n"))
+			}
+			file.Close()
+			historyIndex = len(history)
+			return
+
 		}
 		count,_ = strconv.Atoi(argv[1])
 
