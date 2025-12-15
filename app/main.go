@@ -438,12 +438,16 @@ func main() {
 	defer rl.Close()
 	loadHistory()
 
+	HISTORY_FILE := os.Getenv("HISTFILE")
+	hisFile, _ := os.OpenFile(HISTORY_FILE, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+
 	for {
 		input, err := rl.Readline()
 		if err != nil {
 			break
 		}
 		history = append(history, input)
+		hisFile.Write([]byte(input + "\n"))
 		commands := splitByPipe(input)
 		if len(commands) > 1 {
 			// reader, writer, err := os.Pipe()
