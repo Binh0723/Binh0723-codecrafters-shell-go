@@ -350,7 +350,6 @@ func historyCommand(argv []string) {
 			file.Close()
 			historyIndex = len(history)
 			return
-
 		}
 		count,_ = strconv.Atoi(argv[1])
 
@@ -437,6 +436,7 @@ func main() {
 		panic(err)
 	}
 	defer rl.Close()
+	loadHistory()
 
 	for {
 		input, err := rl.Readline()
@@ -604,4 +604,18 @@ func customCommand(argv []string) {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "%s: command not found\n", value)
+}
+
+func loadHistory() {
+	HISTORY_FILE := os.Getenv("HISTFILE")
+	file, _ := os.Open(HISTORY_FILE)
+	
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		// scanner.Text() returns the most recent token (line) as a string.
+		line := scanner.Text()
+		history = append(history, line)
+	}
+	file.Close()
+
 }
